@@ -32,15 +32,17 @@
 
 static int snd_rpi_i_sabre_q2m_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_component *component = rtd->codec_dai->component;
+	//struct snd_soc_component *component = rtd->codec_dai->component;
+	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
+
 	unsigned int value;
 
 	/* Device ID */
-	value = snd_soc_component_read32(component, ISABRECODEC_REG_01);
+	value = snd_soc_component_read(component, ISABRECODEC_REG_01);
 	dev_info(component->card->dev, "Audiophonics Device ID : %02X\n", value);
 
 	/* API revision */
-	value = snd_soc_component_read32(component, ISABRECODEC_REG_02);
+	value = snd_soc_component_read(component, ISABRECODEC_REG_02);
 	dev_info(component->card->dev, "Audiophonics API revision : %02X\n", value);
 
 	return 0;
@@ -50,7 +52,9 @@ static int snd_rpi_i_sabre_q2m_hw_params(
 	struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd     = substream->private_data;
-	struct snd_soc_dai         *cpu_dai = rtd->cpu_dai;
+	//struct snd_soc_dai         *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai         *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
+
 	int bclk_ratio;
 
 	bclk_ratio = snd_pcm_format_physical_width(
@@ -63,21 +67,60 @@ static struct snd_soc_ops snd_rpi_i_sabre_q2m_ops = {
 	.hw_params = snd_rpi_i_sabre_q2m_hw_params,
 };
 
+static struct snd_soc_dai_link_component dai_link_cpu[]	= {
+	{ 
+		.dai_name = "bcm2708-i2s.0", 
+	} 
+};
 
+static struct snd_soc_dai_link_component dai_link_codec[] = { 
+	{
+		.name = "i-sabre-codec-i2c.1-0048", 
+		.dai_name = "i-sabre-codec-dai",
+	}
+};
+
+static struct snd_soc_dai_link_component dai_link_platform[] = { 
+	{
+		.name = "bcm2708-i2s.0"
+	}
+};
+
+static struct snd_soc_dai_link snd_rpi_i_sabre_q2m_dai[] = {
+	{
+ 		.name           = "I-Sabre Q2M",
+    	.stream_name    = "I-Sabre Q2M DAC",
+		//SND_SOC_DAILINK_REG3(dai_link_cpu, dai_link_codec, dai_link_platform),
+		
+		.cpus		= dai_link_cpu,
+		.num_cpus	= ARRAY_SIZE(dai_link_cpu),
+		.codecs		= dai_link_codec,
+		.num_codecs	= ARRAY_SIZE(dai_link_codec),
+		.platforms	= dai_link_platform,
+		.num_platforms	= ARRAY_SIZE(dai_link_platform),
+
+    	.dai_fmt        = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
+                                            | SND_SOC_DAIFMT_CBS_CFS,
+    	.init           = snd_rpi_i_sabre_q2m_init,
+    	.ops            = &snd_rpi_i_sabre_q2m_ops,
+    }
+ };
+/*
 static struct snd_soc_dai_link snd_rpi_i_sabre_q2m_dai[] = {
 	{
 		.name           = "I-Sabre Q2M",
 		.stream_name    = "I-Sabre Q2M DAC",
-		.cpu_dai_name   = "bcm2708-i2s.0",
-		.codec_dai_name = "i-sabre-codec-dai",
-		.platform_name  = "bcm2708-i2s.0",
-		.codec_name     = "i-sabre-codec-i2c.1-0048",
+		//.cpu_dai_name   = "bcm2708-i2s.0",
+		//.codec_dai_name = "i-sabre-codec-dai",
+		//.platform_name  = "bcm2708-i2s.0",
+		//.codec_name     = "i-sabre-codec-i2c.1-0048",
 		.dai_fmt        = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
 						| SND_SOC_DAIFMT_CBS_CFS,
 		.init           = snd_rpi_i_sabre_q2m_init,
 		.ops            = &snd_rpi_i_sabre_q2m_ops,
 	}
 };
+*/
 
 /* audio machine driver */
 static struct snd_soc_card snd_rpi_i_sabre_q2m = {
@@ -101,10 +144,13 @@ static int snd_rpi_i_sabre_q2m_probe(struct platform_device *pdev)
 		i2s_node = of_parse_phandle(pdev->dev.of_node,
 							"i2s-controller", 0);
 		if (i2s_node) {
-			dai->cpu_dai_name     = NULL;
-			dai->cpu_of_node      = i2s_node;
-			dai->platform_name    = NULL;
-			dai->platform_of_node = i2s_node;
+			//dai->cpu_dai_name     = NULL;
+			//dai->cpu_of_node      = i2s_node;
+			dai->cpus[0].of_node = i2s_node;
+
+			//dai->platform_name    = NULL;
+			//dai->platform_of_node = i2s_node;
+			dai->platforms[0].of_node = i2s_node;
 		} else {
 			dev_err(&pdev->dev,
 			    "Property 'i2s-controller' missing or invalid\n");
@@ -153,5 +199,5 @@ static struct platform_driver snd_rpi_i_sabre_q2m_driver = {
 module_platform_driver(snd_rpi_i_sabre_q2m_driver);
 
 MODULE_DESCRIPTION("ASoC Driver for I-Sabre Q2M");
-MODULE_AUTHOR("Audiophonics <http://www.audiophonics.fr>");
+MODULE_AUTHOR("Audiophonics <http://www.audiophonics.fr> & arpel");
 MODULE_LICENSE("GPL");

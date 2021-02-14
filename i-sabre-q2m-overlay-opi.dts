@@ -3,9 +3,27 @@
 
 / {
 	compatible = "allwinner,sun8i-h3";
+    // make life a bit easier..
+	fragment@0 {
+		target-path = "/aliases";
+		__overlay__ {
+			i2c0 = "/soc/i2c@1c2ac00";
+			i2c1 = "/soc/i2c@1c2b000";
+			i2c2 = "/soc/i2c@1c2b400";
+			i2s0 = "/soc/i2s@1c22000";
+		};
+	};
 
- 	fragment@0 {
- 		target-path = "/";
+ 	fragment@1 {
+        // Enable i2c0 -- adjust this for the right i2c block
+        // This will be on (SCL, SDA): PA11, PA12
+        // Try 1
+ 		// That's the i2c bus sharing PA18/PA19 with i2s0
+ 		// target = <&i2c1>;
+ 		// Try 2
+ 		target-path = "/"; 
+		
+		//Unchanged in the 2 tries
 		__overlay__ {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -20,7 +38,7 @@
 		}; 
  	};
 
-	fragment@1 {
+	fragment@2 {
 		target = <&i2s0>;
 		__overlay__ {
 			status = "okay";
@@ -30,14 +48,14 @@
 		};
 	};
 
-	fragment@2 {
+	fragment@3 {
 		target-path = "/";
 		__overlay__ {
 			sound_i2s {
 				compatible = "simple-audio-card";
 				simple-audio-card,name = "es9038q2m";
 				simple-audio-card,format = "i2s";
-		                status = "okay";
+				status = "okay";
 
 				simple-audio-card,cpu {
 					sound-dai = <&i2s0>;
